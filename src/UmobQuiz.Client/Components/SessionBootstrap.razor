@@ -1,0 +1,19 @@
+@inject AuthSessionService AuthSession
+
+@if (_ready)
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private bool _ready;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthSession.RestoreAsync();
+        _ready = true;
+    }
+}

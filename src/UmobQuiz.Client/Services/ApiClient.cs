@@ -4,7 +4,7 @@ using UmobQuiz.Shared;
 
 namespace UmobQuiz.Client.Services;
 
-public sealed class ApiClient(HttpClient httpClient, AuthState authState)
+public sealed class ApiClient(HttpClient httpClient, AuthState authState, AuthSessionService authSession)
 {
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
     {
@@ -77,8 +77,14 @@ public sealed class ApiClient(HttpClient httpClient, AuthState authState)
         return httpClient.SendAsync(request);
     }
 
-    private static async Task EnsureSuccessAsync(HttpResponseMessage response)
+    private async Task EnsureSuccessAsync(HttpResponseMessage response)
     {
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            await authSession.InvalidateAsync();
+            throw new UnauthorizedAccessException("Your session has expired. Please sign in again.");
+        }
+
         if (response.IsSuccessStatusCode)
         {
             return;

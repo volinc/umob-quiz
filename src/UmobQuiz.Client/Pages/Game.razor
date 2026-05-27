@@ -99,6 +99,9 @@ else
             StartTimer(session.StartTime);
             await LoadNextQuestion();
         }
+        catch (UnauthorizedAccessException)
+        {
+        }
         catch (Exception ex)
         {
             Snackbar.Add(ex.Message, Severity.Error);
@@ -176,6 +179,9 @@ else
             {
                 await LoadNextQuestion();
             }
+        }
+        catch (UnauthorizedAccessException)
+        {
         }
         catch (Exception ex)
         {

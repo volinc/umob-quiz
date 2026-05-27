@@ -21,9 +21,8 @@
 </MudLayout>
 
 @code {
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        await AuthPersistence.LoadAsync();
         AuthState.Changed += StateHasChanged;
     }
 

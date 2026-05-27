@@ -11,10 +11,17 @@ public sealed class LocalStorageAuthPersistence(IJSRuntime jsRuntime, AuthState 
     {
         var token = await jsRuntime.InvokeAsync<string?>("localStorage.getItem", TokenKey);
         var username = await jsRuntime.InvokeAsync<string?>("localStorage.getItem", UsernameKey);
-        if (!string.IsNullOrWhiteSpace(token) && !string.IsNullOrWhiteSpace(username))
+        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(username))
         {
-            authState.SetSession(token, username);
+            if (!string.IsNullOrWhiteSpace(token) || !string.IsNullOrWhiteSpace(username))
+            {
+                await ClearAsync();
+            }
+
+            return;
         }
+
+        authState.SetSession(token, username);
     }
 
     public async Task SaveAsync(string token, string username)

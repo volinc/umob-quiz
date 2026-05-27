@@ -50,6 +50,13 @@ else
             return;
         }
 
-        _sessions = await ApiClient.GetHistoryAsync();
+        try
+        {
+            _sessions = await ApiClient.GetHistoryAsync();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return;
+        }
     }
 }

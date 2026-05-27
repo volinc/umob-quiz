@@ -11,12 +11,6 @@ public sealed class AuthState
 
     public event Action? Changed;
 
-    public void LoadFromStorage()
-    {
-        Token = null;
-        Username = null;
-    }
-
     public void SetSession(string token, string username)
     {
         Token = token;

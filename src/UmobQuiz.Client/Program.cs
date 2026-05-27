@@ -11,6 +11,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddMudServices();
 builder.Services.AddSingleton<AuthState>();
 builder.Services.AddScoped<LocalStorageAuthPersistence>();
+builder.Services.AddScoped<AuthSessionService>();
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped(sp => new HttpClient
 {
