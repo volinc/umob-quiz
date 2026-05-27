@@ -93,6 +93,7 @@ Simple username/password registration and login with `PasswordHasher<T>` and JWT
 | POST | `/api/game/{id}/answer` | Submit answer |
 | POST | `/api/game/{id}/finish` | End session when timer expires |
 | GET | `/api/game/history` | Past sessions |
+| GET | `/api/leaderboard` | Global best-all-time scores (optional `?limit=50`) |
 
 ## Future improvements
 

@@ -32,6 +32,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<GameService>();
+builder.Services.AddScoped<LeaderboardService>();
 builder.Services.AddScoped<GbfsIngestionService>();
 builder.Services.AddScoped<QuestionPoolService>();
 builder.Services.AddSingleton<GameSessionStore>();
@@ -85,6 +86,7 @@ app.MapScalarApiReference();
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 app.MapAuthEndpoints();
 app.MapGameEndpoints();
+app.MapLeaderboardEndpoints();
 
 await InitializeDatabaseAsync(app.Services);
 app.Run();

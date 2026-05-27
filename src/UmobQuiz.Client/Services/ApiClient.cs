@@ -63,6 +63,14 @@ public sealed class ApiClient(HttpClient httpClient, AuthState authState, AuthSe
         return (await response.Content.ReadFromJsonAsync<List<GameSessionSummaryDto>>())!;
     }
 
+    public async Task<IReadOnlyList<LeaderboardEntryDto>> GetLeaderboardAsync(int? limit = null)
+    {
+        var url = limit is null ? "api/leaderboard" : $"api/leaderboard?limit={limit.Value}";
+        var response = await SendAuthorizedAsync(HttpMethod.Get, url);
+        await EnsureSuccessAsync(response);
+        return (await response.Content.ReadFromJsonAsync<List<LeaderboardEntryDto>>())!;
+    }
+
     private Task<HttpResponseMessage> SendAuthorizedAsync(HttpMethod method, string url) =>
         SendAuthorizedAsync(method, url, null);
 

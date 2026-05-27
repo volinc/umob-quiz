@@ -1,0 +1,67 @@
+@page "/leaderboard"
+@inject ApiClient ApiClient
+@inject AuthState AuthState
+@inject NavigationManager Navigation
+
+<MudText Typo="Typo.h5" Class="mb-4">Global leaderboard</MudText>
+<MudText Class="mb-4">Best all-time score per player (completed games only).</MudText>
+
+@if (!AuthState.IsAuthenticated)
+{
+    <MudText>Please sign in first.</MudText>
+}
+else if (_entries is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_entries.Count == 0)
+{
+    <MudText>No completed games yet. Play a round to appear here.</MudText>
+}
+else
+{
+    <MudTable Items="_rankedEntries" Hover="true">
+        <HeaderContent>
+            <MudTh>Rank</MudTh>
+            <MudTh>Player</MudTh>
+            <MudTh>Best score</MudTh>
+            <MudTh>Achieved</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Rank</MudTd>
+            <MudTd>@context.Entry.Username</MudTd>
+            <MudTd>@context.Entry.BestScore</MudTd>
+            <MudTd>@context.Entry.AchievedAt.ToLocalTime()</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+<MudButton Class="mt-4" Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Navigation.NavigateTo("/game"))">
+    Back to game
+</MudButton>
+
+@code {
+    private IReadOnlyList<LeaderboardEntryDto>? _entries;
+
+    private IEnumerable<RankedEntry> _rankedEntries =>
+        (_entries ?? []).Select((entry, index) => new RankedEntry(index + 1, entry));
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        try
+        {
+            _entries = await ApiClient.GetLeaderboardAsync();
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private sealed record RankedEntry(int Rank, LeaderboardEntryDto Entry);
+}

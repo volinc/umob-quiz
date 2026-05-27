@@ -11,6 +11,7 @@
         @if (AuthState.IsAuthenticated)
         {
             <MudText Class="mr-4">@AuthState.Username</MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="GoLeaderboard">Leaderboard</MudButton>
             <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="GoHistory">History</MudButton>
             <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="SignOut">Sign out</MudButton>
         }
@@ -25,6 +26,8 @@
     {
         AuthState.Changed += StateHasChanged;
     }
+
+    private void GoLeaderboard() => Navigation.NavigateTo("/leaderboard");
 
     private void GoHistory() => Navigation.NavigateTo("/history");
 

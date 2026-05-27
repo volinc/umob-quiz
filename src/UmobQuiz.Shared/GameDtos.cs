@@ -22,3 +22,8 @@ public sealed record GameSessionSummaryDto(
     DateTime? EndTime,
     int Score,
     string Status);
+
+public sealed record LeaderboardEntryDto(
+    string Username,
+    int BestScore,
+    DateTime AchievedAt);
