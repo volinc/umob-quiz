@@ -99,7 +99,10 @@ Simple username/password registration and login with `PasswordHasher<T>` and JWT
 ## Future improvements
 
 - Async email export for very large histories
-- Redis-backed leaderboard and distributed session state for horizontal scaling
+- A separate leaderboard db table for the previous day to calculate actual data starting from the previous day
+- Bring the API closer to OAuth and REST
+- Use Redis instead of InMemory cache
+- A separate table storing the last update time of each feed, instead of the hardcore 2-minute timer
 - Integration tests against recorded GBFS fixtures
 - Additional question generators (distance between bikes via PostGIS `ST_Distance`, dock availability, etc.)
 - Email-free password reset and avatar upload (assignment bonus ideas)
