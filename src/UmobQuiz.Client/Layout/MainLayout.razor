@@ -5,7 +5,7 @@
 @inject NavigationManager Navigation
 
 <MudLayout>
-    <MudAppBar Elevation="1" Color="Color.Primary">
+    <MudAppBar Elevation="1" Color="Color.Primary" Fixed="true">
         <MudText Typo="Typo.h6">Umob GBFS Quiz</MudText>
         <MudSpacer />
         @if (AuthState.IsAuthenticated)
@@ -15,7 +15,7 @@
             <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="SignOut">Sign out</MudButton>
         }
     </MudAppBar>
-    <MudMainContent Class="pa-4">
+    <MudMainContent Class="main-content">
         @Body
     </MudMainContent>
 </MudLayout>

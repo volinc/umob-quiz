@@ -8,6 +8,11 @@ main {
     flex: 1;
 }
 
+.main-content {
+    padding: 16px;
+    padding-top: calc(var(--mud-appbar-height) + 16px);
+}
+
 .sidebar {
     background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
 }
