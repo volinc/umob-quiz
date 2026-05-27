@@ -1,9 +1,29 @@
 @page "/history"
 @inject ApiClient ApiClient
+@inject FileDownloadService FileDownloadService
 @inject AuthState AuthState
 @inject NavigationManager Navigation
 
-<MudText Typo="Typo.h5" Class="mb-4">Your game history</MudText>
+<MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+    <MudText Typo="Typo.h5">Your game history</MudText>
+    @if (AuthState.IsAuthenticated)
+    {
+        <MudTooltip Text="CSV export includes completed games (up to 10,000 per download).">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Download"
+                       Disabled="_exporting"
+                       OnClick="ExportCsvAsync">
+                @(_exporting ? "Exporting…" : "Export CSV")
+            </MudButton>
+        </MudTooltip>
+    }
+</MudStack>
+
+@if (!string.IsNullOrWhiteSpace(_exportError))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@_exportError</MudAlert>
+}
 
 @if (!AuthState.IsAuthenticated)
 {
@@ -41,6 +61,8 @@ else
 
 @code {
     private IReadOnlyList<GameSessionSummaryDto>? _sessions;
+    private bool _exporting;
+    private string? _exportError;
 
     protected override async Task OnInitializedAsync()
     {
@@ -57,6 +79,29 @@ else
         catch (UnauthorizedAccessException)
         {
             return;
+        }
+    }
+
+    private async Task ExportCsvAsync()
+    {
+        _exportError = null;
+        _exporting = true;
+
+        try
+        {
+            await FileDownloadService.DownloadHistoryCsvAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _exportError = ex.Message;
+        }
+        catch (HttpRequestException ex)
+        {
+            _exportError = ex.Message;
+        }
+        finally
+        {
+            _exporting = false;
         }
     }
 }

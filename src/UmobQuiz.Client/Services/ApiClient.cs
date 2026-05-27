@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using UmobQuiz.Shared;
@@ -63,6 +64,30 @@ public sealed class ApiClient(HttpClient httpClient, AuthState authState, AuthSe
         return (await response.Content.ReadFromJsonAsync<List<GameSessionSummaryDto>>())!;
     }
 
+    public async Task<DownloadedFile> DownloadHistoryCsvAsync(
+        int? limit = null,
+        bool includeActive = false,
+        DateTime? fromUtc = null,
+        DateTime? toUtc = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = BuildHistoryExportQuery(limit, includeActive, fromUtc, toUtc);
+        var response = await SendAuthorizedAsync(HttpMethod.Get, $"api/game/history/export{query}");
+
+        if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+        {
+            throw new InvalidOperationException("Export rate limit exceeded. Try again later.");
+        }
+
+        await EnsureSuccessAsync(response);
+
+        var content = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+        var contentType = response.Content.Headers.ContentType?.MediaType ?? "text/csv";
+        var fileName = GetDownloadFileName(response) ?? "umob-quiz-history.csv";
+
+        return new DownloadedFile(content, fileName, contentType);
+    }
+
     public async Task<IReadOnlyList<LeaderboardEntryDto>> GetLeaderboardAsync(int? limit = null)
     {
         var url = limit is null ? "api/leaderboard" : $"api/leaderboard?limit={limit.Value}";
@@ -83,6 +108,52 @@ public sealed class ApiClient(HttpClient httpClient, AuthState authState, AuthSe
         }
 
         return httpClient.SendAsync(request);
+    }
+
+    private static string BuildHistoryExportQuery(
+        int? limit,
+        bool includeActive,
+        DateTime? fromUtc,
+        DateTime? toUtc)
+    {
+        var parts = new List<string>();
+        if (limit is not null)
+        {
+            parts.Add($"limit={limit.Value}");
+        }
+
+        if (includeActive)
+        {
+            parts.Add("includeActive=true");
+        }
+
+        if (fromUtc is not null)
+        {
+            parts.Add($"from={Uri.EscapeDataString(fromUtc.Value.ToString("O", CultureInfo.InvariantCulture))}");
+        }
+
+        if (toUtc is not null)
+        {
+            parts.Add($"to={Uri.EscapeDataString(toUtc.Value.ToString("O", CultureInfo.InvariantCulture))}");
+        }
+
+        return parts.Count == 0 ? string.Empty : "?" + string.Join('&', parts);
+    }
+
+    private static string? GetDownloadFileName(HttpResponseMessage response)
+    {
+        if (ContentDispositionHeaderValue.TryParse(
+                response.Content.Headers.ContentDisposition?.ToString(),
+                out var disposition))
+        {
+            var name = disposition.FileNameStar ?? disposition.FileName;
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                return name.Trim('"');
+            }
+        }
+
+        return null;
     }
 
     private async Task EnsureSuccessAsync(HttpResponseMessage response)

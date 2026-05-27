@@ -92,11 +92,13 @@ Simple username/password registration and login with `PasswordHasher<T>` and JWT
 | GET | `/api/game/{id}/question` | Next question |
 | POST | `/api/game/{id}/answer` | Submit answer |
 | POST | `/api/game/{id}/finish` | End session when timer expires |
-| GET | `/api/game/history` | Past sessions |
+| GET | `/api/game/history` | Past sessions (last 20) |
+| GET | `/api/game/history/export` | Download your session history as CSV (JWT required; optional `?limit=`, `?includeActive=`, `?from=`, `?to=` ISO UTC; max 10,000 rows; rate-limited) |
 | GET | `/api/leaderboard` | Global best-all-time scores (optional `?limit=50`) |
 
 ## Future improvements
 
+- Async email export for very large histories
 - Redis-backed leaderboard and distributed session state for horizontal scaling
 - Integration tests against recorded GBFS fixtures
 - Additional question generators (distance between bikes via PostGIS `ST_Distance`, dock availability, etc.)

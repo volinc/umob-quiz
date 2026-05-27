@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.RateLimiting;
 using UmobQuiz.Api.Application.Game;
 using UmobQuiz.Shared;
 
@@ -6,9 +7,41 @@ namespace UmobQuiz.Api.Endpoints;
 
 public static class GameEndpoints
 {
+    public const string HistoryExportRateLimitPolicy = "history-export";
+
     public static RouteGroupBuilder MapGameEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/game").WithTags("Game").RequireAuthorization();
+
+        group.MapGet("/history/export", async (
+            int? limit,
+            bool? includeActive,
+            DateTime? from,
+            DateTime? to,
+            ClaimsPrincipal user,
+            GameService gameService,
+            CancellationToken ct) =>
+        {
+            if (from is not null && to is not null && from > to)
+            {
+                return Results.BadRequest(new { message = "The 'from' date must be before or equal to 'to'." });
+            }
+
+            var options = new HistoryExportOptions(
+                HistoryExportOptions.ClampLimit(limit),
+                includeActive ?? false,
+                from,
+                to);
+
+            var userId = GetUserId(user);
+            var fileName = $"umob-quiz-history-{DateTime.UtcNow:yyyyMMdd}.csv";
+
+            return Results.Stream(
+                async stream => await gameService.StreamHistoryCsvAsync(userId, options, stream, ct),
+                contentType: "text/csv; charset=utf-8",
+                fileDownloadName: fileName);
+        })
+        .RequireRateLimiting(HistoryExportRateLimitPolicy);
 
         group.MapPost("/start", async (ClaimsPrincipal user, GameService gameService, CancellationToken ct) =>
         {

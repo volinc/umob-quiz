@@ -13,6 +13,7 @@ builder.Services.AddSingleton<AuthState>();
 builder.Services.AddScoped<LocalStorageAuthPersistence>();
 builder.Services.AddScoped<AuthSessionService>();
 builder.Services.AddScoped<ApiClient>();
+builder.Services.AddScoped<FileDownloadService>();
 builder.Services.AddScoped(sp => new HttpClient
 {
     BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)

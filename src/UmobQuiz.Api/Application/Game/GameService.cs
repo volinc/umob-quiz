@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using UmobQuiz.Api.Application.Questions;
 using UmobQuiz.Api.Domain.Entities;
@@ -147,6 +148,52 @@ public sealed class GameService(
                 s.Score,
                 s.Status.ToString()))
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task StreamHistoryCsvAsync(
+        Guid userId,
+        HistoryExportOptions options,
+        Stream output,
+        CancellationToken cancellationToken)
+    {
+        await using var writer = new StreamWriter(output, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false), leaveOpen: true);
+        await GameHistoryCsvWriter.WriteHeaderAsync(writer, cancellationToken);
+
+        var query = dbContext.GameSessions
+            .AsNoTracking()
+            .Where(s => s.UserId == userId);
+
+        if (!options.IncludeActive)
+        {
+            query = query.Where(s => s.Status != GameSessionStatus.Active && s.EndTime != null);
+        }
+
+        if (options.FromUtc is not null)
+        {
+            query = query.Where(s => s.StartTime >= options.FromUtc);
+        }
+
+        if (options.ToUtc is not null)
+        {
+            query = query.Where(s => s.StartTime <= options.ToUtc);
+        }
+
+        await foreach (var row in query
+            .OrderByDescending(s => s.StartTime)
+            .Take(options.Limit)
+            .Select(s => new GameHistoryCsvRow(
+                s.Id,
+                s.StartTime,
+                s.EndTime,
+                s.Score,
+                s.Status.ToString()))
+            .AsAsyncEnumerable()
+            .WithCancellation(cancellationToken))
+        {
+            await GameHistoryCsvWriter.WriteRowAsync(writer, row, cancellationToken);
+        }
+
+        await writer.FlushAsync(cancellationToken);
     }
 
     public async Task<SubmitAnswerResponse?> FinishGameAsync(
