@@ -86,7 +86,7 @@ app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 app.MapAuthEndpoints();
 app.MapGameEndpoints();
 
-await WaitForDatabaseAsync(app.Services);
+await InitializeDatabaseAsync(app.Services);
 app.Run();
 
 static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy() =>
@@ -94,7 +94,7 @@ static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy() =>
         .HandleTransientHttpError()
         .WaitAndRetryAsync(3, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)));
 
-static async Task WaitForDatabaseAsync(IServiceProvider services)
+static async Task InitializeDatabaseAsync(IServiceProvider services)
 {
     using var scope = services.CreateScope();
     var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
@@ -107,6 +107,8 @@ static async Task WaitForDatabaseAsync(IServiceProvider services)
             if (await db.Database.CanConnectAsync())
             {
                 logger.LogInformation("Database connection established");
+                await db.Database.MigrateAsync();
+                logger.LogInformation("Database migrations applied");
                 return;
             }
         }

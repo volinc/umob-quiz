@@ -21,6 +21,10 @@ public static class GameEndpoints
             {
                 return Results.BadRequest(new { message = ex.Message });
             }
+            catch (UnauthorizedAccessException)
+            {
+                return Results.Unauthorized();
+            }
         });
 
         group.MapGet("/{sessionId:guid}/question", async (

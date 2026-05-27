@@ -1,5 +1,7 @@
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 using UmobQuiz.Api.Application.Auth;
+using UmobQuiz.Api.Infrastructure.Persistence;
 using UmobQuiz.Shared;
 
 namespace UmobQuiz.Api.Endpoints;
@@ -38,8 +40,14 @@ public static class AuthEndpoints
             }
         });
 
-        group.MapGet("/me", (ClaimsPrincipal user) =>
+        group.MapGet("/me", async (ClaimsPrincipal user, AppDbContext db, CancellationToken ct) =>
         {
+            var userId = Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            if (!await db.Users.AnyAsync(u => u.Id == userId, ct))
+            {
+                return Results.Unauthorized();
+            }
+
             var username = user.Identity?.Name;
             return username is null ? Results.Unauthorized() : Results.Ok(new { username });
         }).RequireAuthorization();

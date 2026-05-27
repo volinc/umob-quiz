@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: umob
       POSTGRES_DB: umobquiz
     volumes:
-      - ./infra/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
@@ -37,3 +37,6 @@ services:
       - api
     ports:
       - "8081:80"
+
+volumes:
+  db_data:

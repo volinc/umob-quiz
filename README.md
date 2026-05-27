@@ -1,6 +1,6 @@
 # Umob GBFS Quiz
 
-A modular monolith hiring assignment solution: ingest GBFS bike-sharing feeds in the background, store spatial data in PostgreSQL/PostGIS, and run a one-minute multiple-choice quiz in a Blazor WebAssembly UI.
+An assignment solution: ingest GBFS bike-sharing feeds in the background, store spatial data in PostgreSQL/PostGIS, and run a one-minute multiple-choice quiz in a Blazor WebAssembly UI.
 
 ## Quick start (one command)
 
@@ -20,8 +20,8 @@ Wait ~2–3 minutes after startup for the first GBFS ingestion cycle and questio
 
 Open `UmobQuiz.sln` at the repository root. For local debugging without Docker:
 
-1. Start PostGIS and apply `infra/init-db.sql`.
-2. Run **UmobQuiz.Api** (port 8080).
+1. Start PostGIS (e.g. `docker compose up db`).
+2. Run **UmobQuiz.Api** (port 8080); EF Core applies migrations on startup.
 3. Run **UmobQuiz.Client** and browse the dev server URL.
 
 ## Architecture overview
@@ -97,7 +97,6 @@ Simple username/password registration and login with `PasswordHasher<T>` and JWT
 ## Future improvements
 
 - Redis-backed leaderboard and distributed session state for horizontal scaling
-- EF migrations pipeline instead of SQL init script only
 - Integration tests against recorded GBFS fixtures
 - Additional question generators (distance between bikes via PostGIS `ST_Distance`, dock availability, etc.)
 - Email-free password reset and avatar upload (assignment bonus ideas)
@@ -106,5 +105,4 @@ Simple username/password registration and login with `PasswordHasher<T>` and JWT
 ## Trade-offs (review talking points)
 
 - **In-memory** session answers and question pool: fast for a 6-hour MVP; would move to Redis/SQL for multi-instance deployments.
-- **Database-first schema** via `infra/init-db.sql` with EF Core mapping: clear PostGIS DDL control; migrations could be added later.
 - **Text-template questions** from pre-aggregated stats: meets assignment guidance; raw geospatial queries are reserved for future generators.

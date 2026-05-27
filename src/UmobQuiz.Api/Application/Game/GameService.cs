@@ -17,6 +17,11 @@ public sealed class GameService(
 
     public async Task<StartGameResponse> StartGameAsync(Guid userId, CancellationToken cancellationToken)
     {
+        if (!await dbContext.Users.AnyAsync(u => u.Id == userId, cancellationToken))
+        {
+            throw new UnauthorizedAccessException("User account no longer exists.");
+        }
+
         var activeSession = await dbContext.GameSessions
             .AnyAsync(s => s.UserId == userId && s.Status == GameSessionStatus.Active, cancellationToken);
         if (activeSession)
