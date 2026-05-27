@@ -1,0 +1,6 @@
+@UmobQuiz.Api_HostAddress = http://localhost:5025
+
+GET {{UmobQuiz.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

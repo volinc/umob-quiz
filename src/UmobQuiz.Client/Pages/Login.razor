@@ -1,0 +1,49 @@
+@page "/login"
+@inject ApiClient ApiClient
+@inject LocalStorageAuthPersistence AuthPersistence
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudPaper Class="pa-6 mx-auto" Style="max-width: 420px;">
+    <MudText Typo="Typo.h5" Class="mb-4">Sign in</MudText>
+    <EditForm Model="_form" OnValidSubmit="HandleLogin">
+        <MudTextField @bind-Value="_form.Username" Label="Username" Required="true" Class="mb-3" />
+        <MudTextField @bind-Value="_form.Password" Label="Password" InputType="InputType.Password" Required="true" Class="mb-4" />
+        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Disabled="_busy">
+            Sign in
+        </MudButton>
+    </EditForm>
+    <MudButton Class="mt-3" Variant="Variant.Text" OnClick="@(() => Navigation.NavigateTo("/register"))">
+        Create an account
+    </MudButton>
+</MudPaper>
+
+@code {
+    private readonly LoginFormModel _form = new();
+    private bool _busy;
+
+    private async Task HandleLogin()
+    {
+        _busy = true;
+        try
+        {
+            var response = await ApiClient.LoginAsync(new LoginRequest(_form.Username, _form.Password));
+            await AuthPersistence.SaveAsync(response.Token, response.Username);
+            Navigation.NavigateTo("/game");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private sealed class LoginFormModel
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+}

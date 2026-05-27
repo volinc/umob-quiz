@@ -1,0 +1,233 @@
+@page "/game"
+@implements IDisposable
+@inject ApiClient ApiClient
+@inject AuthState AuthState
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+@if (!AuthState.IsAuthenticated)
+{
+    <MudText>Please sign in to play.</MudText>
+}
+else if (_sessionId is null)
+{
+    <MudPaper Class="pa-6 mx-auto text-center" Style="max-width: 520px;">
+        <MudText Typo="Typo.h5" Class="mb-4">GBFS Quiz</MudText>
+        <MudText Class="mb-4">You have 60 seconds. Each correct answer is +50 points, each wrong answer is -20.</MudText>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="StartGame" Disabled="_busy">
+            Start game
+        </MudButton>
+    </MudPaper>
+}
+else
+{
+    <MudStack Spacing="3" Style="max-width: 720px; margin: 0 auto;">
+        <MudPaper Class="pa-4">
+            <MudText Class="mb-2">Time remaining: @_secondsLeft s</MudText>
+            <MudProgressLinear Value="@_progressPercent" Color="Color.Primary" />
+            <MudText Typo="Typo.h5" Class="mt-3" Style="@ScoreStyle">Score: @_score</MudText>
+        </MudPaper>
+
+        @if (_question is not null)
+        {
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h6" Class="mb-4">@_question.Text</MudText>
+                <MudGrid>
+                    @for (var i = 0; i < _question.Options.Count; i++)
+                    {
+                        var index = i;
+                        <MudItem xs="12" sm="6">
+                            <MudButton FullWidth="true"
+                                       Variant="Variant.Outlined"
+                                       Color="@GetButtonColor(index)"
+                                       Disabled="_answering"
+                                       OnClick="() => SubmitAnswer(index)">
+                                @_question.Options[index]
+                            </MudButton>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudPaper>
+        }
+
+        @if (_gameEnded)
+        {
+            <MudAlert Severity="@(_finalStatus == "Won" ? Severity.Success : Severity.Error)">
+                Game over: @_finalStatus with score @_score.
+            </MudAlert>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ResetGame">Play again</MudButton>
+            <MudButton Variant="Variant.Text" OnClick="@(() => Navigation.NavigateTo("/history"))">View history</MudButton>
+        }
+    </MudStack>
+}
+
+@code {
+    private Guid? _sessionId;
+    private QuestionDto? _question;
+    private int _score;
+    private int _secondsLeft = 60;
+    private double _progressPercent = 100;
+    private bool _busy;
+    private bool _answering;
+    private bool _gameEnded;
+    private string? _finalStatus;
+    private int? _lastSelectedIndex;
+    private bool? _lastAnswerCorrect;
+    private PeriodicTimer? _timer;
+    private CancellationTokenSource? _timerCts;
+
+    private string ScoreStyle => _score >= 0 ? "color: #2e7d32;" : "color: #c62828;";
+
+    protected override void OnInitialized()
+    {
+        if (!AuthState.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+        }
+    }
+
+    private async Task StartGame()
+    {
+        _busy = true;
+        try
+        {
+            var session = await ApiClient.StartGameAsync();
+            _sessionId = session.SessionId;
+            _score = 0;
+            _gameEnded = false;
+            _finalStatus = null;
+            StartTimer(session.StartTime);
+            await LoadNextQuestion();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void StartTimer(DateTime startTimeUtc)
+    {
+        _timerCts?.Cancel();
+        _timerCts = new CancellationTokenSource();
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        _ = RunTimerAsync(startTimeUtc, _timerCts.Token);
+    }
+
+    private async Task RunTimerAsync(DateTime startTimeUtc, CancellationToken cancellationToken)
+    {
+        while (await _timer!.WaitForNextTickAsync(cancellationToken))
+        {
+            var elapsed = (int)(DateTime.UtcNow - startTimeUtc).TotalSeconds;
+            _secondsLeft = Math.Max(0, 60 - elapsed);
+            _progressPercent = _secondsLeft / 60d * 100;
+            await InvokeAsync(StateHasChanged);
+
+            if (_secondsLeft <= 0)
+            {
+                await EndGameByTimer();
+                break;
+            }
+        }
+    }
+
+    private async Task LoadNextQuestion()
+    {
+        if (_sessionId is null || _gameEnded)
+        {
+            return;
+        }
+
+        _question = await ApiClient.GetQuestionAsync(_sessionId.Value);
+        _lastSelectedIndex = null;
+        _lastAnswerCorrect = null;
+    }
+
+    private async Task SubmitAnswer(int selectedIndex)
+    {
+        if (_sessionId is null || _question is null || _answering || _gameEnded)
+        {
+            return;
+        }
+
+        _answering = true;
+        _lastSelectedIndex = selectedIndex;
+        try
+        {
+            var response = await ApiClient.SubmitAnswerAsync(
+                _sessionId.Value,
+                new SubmitAnswerRequest(_question.QuestionId, selectedIndex));
+
+            _lastAnswerCorrect = response.IsCorrect;
+            _score = response.TotalScore;
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(500);
+
+            if (response.GameEnded)
+            {
+                _gameEnded = true;
+                _finalStatus = response.Status;
+                StopTimer();
+            }
+            else
+            {
+                await LoadNextQuestion();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _answering = false;
+        }
+    }
+
+    private async Task EndGameByTimer()
+    {
+        if (_sessionId is null || _gameEnded)
+        {
+            return;
+        }
+
+        var result = await ApiClient.FinishGameAsync(_sessionId.Value);
+        _gameEnded = true;
+        _finalStatus = result?.Status ?? (_score >= 0 ? "Won" : "Lost");
+        StopTimer();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private Color GetButtonColor(int index)
+    {
+        if (_lastSelectedIndex != index || _lastAnswerCorrect is null)
+        {
+            return Color.Default;
+        }
+
+        return _lastAnswerCorrect.Value ? Color.Success : Color.Error;
+    }
+
+    private void ResetGame()
+    {
+        StopTimer();
+        _sessionId = null;
+        _question = null;
+        _score = 0;
+        _secondsLeft = 60;
+        _progressPercent = 100;
+        _gameEnded = false;
+    }
+
+    private void StopTimer()
+    {
+        _timerCts?.Cancel();
+        _timer?.Dispose();
+        _timer = null;
+    }
+
+    public void Dispose() => StopTimer();
+}

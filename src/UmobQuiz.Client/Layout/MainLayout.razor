@@ -1,0 +1,39 @@
+﻿@inherits LayoutComponentBase
+@implements IDisposable
+@inject AuthState AuthState
+@inject LocalStorageAuthPersistence AuthPersistence
+@inject NavigationManager Navigation
+
+<MudLayout>
+    <MudAppBar Elevation="1" Color="Color.Primary">
+        <MudText Typo="Typo.h6">Umob GBFS Quiz</MudText>
+        <MudSpacer />
+        @if (AuthState.IsAuthenticated)
+        {
+            <MudText Class="mr-4">@AuthState.Username</MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="GoHistory">History</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="SignOut">Sign out</MudButton>
+        }
+    </MudAppBar>
+    <MudMainContent Class="pa-4">
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await AuthPersistence.LoadAsync();
+        AuthState.Changed += StateHasChanged;
+    }
+
+    private void GoHistory() => Navigation.NavigateTo("/history");
+
+    private async Task SignOut()
+    {
+        await AuthPersistence.ClearAsync();
+        Navigation.NavigateTo("/login");
+    }
+
+    public void Dispose() => AuthState.Changed -= StateHasChanged;
+}

@@ -1,0 +1,14 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY UmobQuiz.sln ./
+COPY src/UmobQuiz.Shared/UmobQuiz.Shared.csproj src/UmobQuiz.Shared/
+COPY src/UmobQuiz.Api/UmobQuiz.Api.csproj src/UmobQuiz.Api/
+RUN dotnet restore src/UmobQuiz.Api/UmobQuiz.Api.csproj
+COPY src/ src/
+RUN dotnet publish src/UmobQuiz.Api/UmobQuiz.Api.csproj -c Release -o /app/publish /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+WORKDIR /app
+COPY --from=build /app/publish .
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "UmobQuiz.Api.dll"]

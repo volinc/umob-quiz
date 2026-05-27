@@ -1,0 +1,55 @@
+@page "/history"
+@inject ApiClient ApiClient
+@inject AuthState AuthState
+@inject NavigationManager Navigation
+
+<MudText Typo="Typo.h5" Class="mb-4">Your game history</MudText>
+
+@if (!AuthState.IsAuthenticated)
+{
+    <MudText>Please sign in first.</MudText>
+}
+else if (_sessions is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_sessions.Count == 0)
+{
+    <MudText>No completed games yet.</MudText>
+}
+else
+{
+    <MudTable Items="_sessions" Hover="true">
+        <HeaderContent>
+            <MudTh>Started</MudTh>
+            <MudTh>Ended</MudTh>
+            <MudTh>Score</MudTh>
+            <MudTh>Status</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.StartTime.ToLocalTime()</MudTd>
+            <MudTd>@(context.EndTime?.ToLocalTime().ToString() ?? "-")</MudTd>
+            <MudTd>@context.Score</MudTd>
+            <MudTd>@context.Status</MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+<MudButton Class="mt-4" Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Navigation.NavigateTo("/game"))">
+    Back to game
+</MudButton>
+
+@code {
+    private IReadOnlyList<GameSessionSummaryDto>? _sessions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        _sessions = await ApiClient.GetHistoryAsync();
+    }
+}
