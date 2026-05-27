@@ -26,6 +26,20 @@ Open `UmobQuiz.sln` at the repository root. For local debugging without Docker:
 
 ## Architecture overview
 
+This stack matches the assignment end to end: background GBFS ingestion, spatial persistence, a timed quiz API, and a polished browser UI—without over-engineering for a reviewable MVP.
+
+**Docker Compose** gives reviewers a single `docker compose up --build` path: API, database, and static UI start together with consistent ports and networking. That removes “works on my machine” friction for a time-boxed exercise.
+
+**PostgreSQL + PostGIS** is the natural store for GBFS data. Feeds expose bike and station coordinates; `geography(Point,4326)` keeps locations in WGS‑84, supports future distance-based questions (`ST_Distance`, nearest-neighbour queries), and pairs cleanly with EF Core migrations for users, sessions, and feed entities.
+
+**.NET 10 (Minimal API + `BackgroundService`)** fits the server role well: typed HTTP endpoints and shared DTOs, built-in DI, JWT auth, and a long-running worker that polls feeds every two minutes without blocking quiz requests. One process hosts both the API and the ingestion loop—simple to deploy in one container while staying easy to split later.
+
+**Blazor WebAssembly + MudBlazor** delivers a responsive quiz UI that runs in the browser (countdown, multiple choice, history) while calling the API over HTTP. **UmobQuiz.Shared** keeps request/response contracts identical on client and server, so API changes stay compile-time safe.
+
+**Nginx in front of WASM** serves the Blazor bundle efficiently and reverse-proxies `/api/*` to the API container, so the browser sees one origin in production and CORS stays straightforward.
+
+Together: PostGIS for spatial truth, .NET for ingestion + game logic, Blazor for the player experience, Docker for reproducible demos—each piece does one job well and lines up with the README’s future improvements (Redis, OAuth, more PostGIS generators) without rewriting the core.
+
 ```mermaid
 flowchart LR
   subgraph docker [Docker Compose]
